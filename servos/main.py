@@ -35,6 +35,10 @@ TIMEOUT_MS = 500                   # laptop silent -> go to rest pose
 # ---------- Wi-Fi ----------
 wlan = network.WLAN(network.STA_IF)
 wlan.active(True)
+try:                                   # disable Wi-Fi power save (lower latency)
+    wlan.config(pm=network.WLAN.PM_NONE)
+except Exception as e:
+    print("power save not changed:", e)
 wlan.connect(SSID, PASSWORD)
 t0 = time.ticks_ms()
 while not wlan.isconnected():
@@ -110,7 +114,8 @@ try:
     while True:
         start = time.ticks_ms()
         try:
-            client.check_msg()
+            for _ in range(20):          # drain backlog so we act on newest msg
+                client.check_msg()
         except OSError:
             reset()
 

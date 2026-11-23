@@ -21,7 +21,7 @@ try:
         g = squeeze_fn()
         x, y = xrt.get_right_axis()
         client.publish("gripper/cmd", json.dumps({"r": r, "g": g, "y": y}))
-        time.sleep(1/50)
+        time.sleep(1/30)
 finally:
     client.publish("gripper/cmd", json.dumps({"r": 0, "g": 0, "y": 0}))
     xrt.close()
