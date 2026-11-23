@@ -1,4 +1,5 @@
 # main.py — 3x STS3215 on the URT-2 bus + 1x PWM micro servo (SG90/MG90 style)
+# Each motor runs its own independent motion pattern at the same time.
 from machine import Pin, PWM
 import time
 from sts import STSBus
@@ -39,23 +40,60 @@ def report():
             sid, bus.read_pos(sid), bus.read_load(sid),
             bus.read_temp(sid), bus.read_voltage(sid)))
 
+# ---------- per-motor patterns ----------
+# Each pattern is a list of (angle_degrees, hold_ms). The motor goes to each
+# angle in order, waits hold_ms, then moves on and repeats. Angles are from
+# center for bus servos (-180..180) and 0..180 for the micro servo.
+# speed is in steps/s (4096 = one full turn per second), acc is 0-254.
+# Keep speed low while testing on a small power supply.
+PATTERNS = {
+    # Servo 1: slow, small back-and-forth
+    1: {"speed": 800,  "acc": 30, "steps": [(-30, 2000), (30, 2000)]},
+    # Servo 2: wider and faster swing
+    2: {"speed": 2000, "acc": 50, "steps": [(-90, 1200), (90, 1200)]},
+    # Servo 3: stepped through four positions
+    3: {"speed": 1200, "acc": 40, "steps": [(-60, 1000), (-20, 1000), (20, 1000), (60, 1000)]},
+}
+MICRO_STEPS = [(30, 700), (90, 700), (150, 700), (90, 700)]   # (angle 0-180, hold_ms)
+
+class Runner:
+    """Steps one motor through its list of (angle, hold_ms) forever, without blocking."""
+    def __init__(self, steps, send):
+        self.steps = steps
+        self.send = send
+        self.i = 0
+        self.due = time.ticks_ms()      # time to move to the next step
+
+    def update(self, now):
+        if time.ticks_diff(now, self.due) >= 0:
+            angle, hold = self.steps[self.i]
+            self.send(angle)
+            self.due = time.ticks_add(now, hold)
+            self.i = (self.i + 1) % len(self.steps)
+
+def bus_sender(sid):
+    p = PATTERNS[sid]
+    return lambda deg: bus.move(sid, deg_to_pos(deg), p["speed"], p["acc"])
+
+runners = [Runner(PATTERNS[sid]["steps"], bus_sender(sid)) for sid in IDS]
+runners.append(Runner(MICRO_STEPS, micro.angle))
+
 # ---------- program ----------
 check_servos()
 bus.sync_move(IDS, [2048, 2048, 2048])   # center all
 micro.angle(90)
 time.sleep(1.5)
 
+last_report = time.ticks_ms()
 try:
     while True:
-        bus.sync_move(IDS, [deg_to_pos(-90)] * 3, speed=2000, acc=50)
-        micro.angle(30)
-        time.sleep(1.5)
-
-        bus.sync_move(IDS, [deg_to_pos(90)] * 3, speed=2000, acc=50)
-        micro.angle(150)
-        time.sleep(1.5)
-
-        report()
+        now = time.ticks_ms()
+        for r in runners:
+            r.update(now)
+        if time.ticks_diff(now, last_report) >= 5000:
+            report()
+            last_report = now
+        time.sleep_ms(10)
 except KeyboardInterrupt:
     # Stop button in Thonny lands here
     for sid in IDS:

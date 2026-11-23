@@ -2,8 +2,8 @@
 # New STS3215s all ship as ID 1 at 1,000,000 baud.
 from sts import STSBus
 
-OLD_ID = 1
-NEW_ID = 2      # change for each servo: 1, 2, 3
+OLD_ID = 2
+NEW_ID = 3      # change for each servo: 1, 2, 3
 
 bus = STSBus(tx=17, rx=16)
 
