@@ -88,15 +88,27 @@ def target_deg():
 last_msg_ms = time.ticks_ms()
 trig_down = False
 PRESS_ON, PRESS_OFF = 0.2, 0.1         # hysteresis so it doesn't spam
+min_skew = None                        # smallest (esp_ms - laptop_ms) seen = baseline
+lag_ms = 0                             # current lag above that baseline
+last_lag_print = time.ticks_ms()
 
 def on_msg(topic, msg):
-    global last_msg_ms, trig_down
+    global last_msg_ms, trig_down, min_skew, lag_ms, last_lag_print
     try:
         c = json.loads(msg)
+        now = time.ticks_ms()
+        if "t" in c:
+            skew = time.ticks_diff(now, int(c["t"]))
+            if min_skew is None or skew < min_skew:
+                min_skew = skew
+            lag_ms = skew - min_skew
+            if time.ticks_diff(now, last_lag_print) >= 1000:
+                last_lag_print = now
+                print("lag above best: %d ms" % lag_ms)
         r = float(c["r"])
         if not trig_down and r > PRESS_ON:
             trig_down = True
-            print("TRIGGER PRESSED  t=%d ms  r=%.2f" % (time.ticks_ms(), r))
+            print("TRIGGER PRESSED  t=%d ms  r=%.2f  lag=%d ms" % (now, r, lag_ms))
         elif trig_down and r < PRESS_OFF:
             trig_down = False
             print("TRIGGER RELEASED t=%d ms" % time.ticks_ms())
