@@ -1,0 +1,20 @@
+{
+  "_comment": "open_pos/closed_pos are PLACEHOLDERS. Calibrate with bench_test.py before attaching tendons. torque_limit is 0-1000 (start low).",
+  "serial_port": "COM3",
+  "baud": 1000000,
+  "udp_port": 5005,
+  "control_hz": 100,
+  "feedback_hz": 50,
+  "packet_timeout_s": 0.2,
+  "max_rate_per_s": 3.0,
+  "servo_speed": 1500,
+  "servo_acc": 50,
+  "torque_limit": 300,
+  "temp_cutoff_c": 65,
+  "channels": {
+    "idx":   {"id": 1, "open_pos": 2048, "closed_pos": 2048},
+    "mid":   {"id": 2, "open_pos": 2048, "closed_pos": 2048},
+    "thumb": {"id": 3, "open_pos": 2048, "closed_pos": 2048},
+    "base":  {"id": 4, "open_pos": 2048, "closed_pos": 2048}
+  }
+}
