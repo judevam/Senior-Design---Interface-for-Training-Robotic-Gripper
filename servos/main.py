@@ -86,12 +86,21 @@ def target_deg():
 
 # ---------- MQTT ----------
 last_msg_ms = time.ticks_ms()
+trig_down = False
+PRESS_ON, PRESS_OFF = 0.2, 0.1         # hysteresis so it doesn't spam
 
 def on_msg(topic, msg):
-    global last_msg_ms
+    global last_msg_ms, trig_down
     try:
         c = json.loads(msg)
-        inputs["r"] = float(c["r"])
+        r = float(c["r"])
+        if not trig_down and r > PRESS_ON:
+            trig_down = True
+            print("TRIGGER PRESSED  t=%d ms  r=%.2f" % (time.ticks_ms(), r))
+        elif trig_down and r < PRESS_OFF:
+            trig_down = False
+            print("TRIGGER RELEASED t=%d ms" % time.ticks_ms())
+        inputs["r"] = r
         inputs["g"] = float(c["g"])
         inputs["y"] = float(c["y"])
         last_msg_ms = time.ticks_ms()

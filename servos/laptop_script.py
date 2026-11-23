@@ -15,11 +15,18 @@ client.connect("localhost", 1883)
 client.loop_start()
 
 xrt.init()
+trig_down = False
 try:
     while True:
         r = xrt.get_right_trigger()
         g = squeeze_fn()
         x, y = xrt.get_right_axis()
+        if not trig_down and r > 0.2:
+            trig_down = True
+            print("TRIGGER PRESSED  %s  r=%.2f" % (time.strftime("%H:%M:%S") + ".%03d" % (time.time() % 1 * 1000), r))
+        elif trig_down and r < 0.1:
+            trig_down = False
+            print("TRIGGER RELEASED %s" % (time.strftime("%H:%M:%S") + ".%03d" % (time.time() % 1 * 1000)))
         client.publish("gripper/cmd", json.dumps({"r": r, "g": g, "y": y}))
         time.sleep(1/30)
 finally:
